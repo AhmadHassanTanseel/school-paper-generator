@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@layer utilities {
+  /* Pakistani & Board Exam Typography Support */
+  .font-urdu {
+    font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Mehr Nastaliq Web', Arial, sans-serif;
+  }
+  
+  .font-arabic {
+    font-family: 'Traditional Arabic', 'Scheherazade New', 'Noto Naskh Arabic', 'Alvi Nastaleeq', Arial, sans-serif;
+  }
+}
+
+/* Ensure smooth bidirectional RTL text rendering */
+.dir-rtl {
+  direction: rtl;
+}
+
+/* Base application styling */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
