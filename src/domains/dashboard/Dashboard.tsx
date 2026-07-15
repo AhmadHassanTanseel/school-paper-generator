@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Search, Bell, CheckCircle2, Plus, FileText, Database, 
   History, Printer, BookOpen, Users, ArrowRight, Clock, 
-  ClipboardList,
-   Download, Loader2, User
+  ClipboardList, ShieldCheck, Settings, AlertCircle, 
+  X, Download, Sparkles, Loader2, User
 } from 'lucide-react';
 import { getDatabase } from '../../database/db';
 
@@ -75,24 +75,18 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         let qRes: any[] = [];
         let tRes: any[] = [];
 
-        // 1. Safely Search Papers (Ignores error if table doesn't exist yet)
         try { pRes = await db.select<any[]>('SELECT id, title, class_level FROM generated_papers WHERE title LIKE $1 OR class_level LIKE $1 LIMIT 3;', [q]); } catch(e){}
-        
-        // 2. Safely Search Questions
         try { qRes = await db.select<any[]>('SELECT id, content_json, subject_id FROM question_bank WHERE content_json LIKE $1 LIMIT 3;', [q]); } catch(e){}
-        
-        // 3. Safely Search Teachers
         try { tRes = await db.select<any[]>('SELECT id, name, subjects FROM teachers WHERE name LIKE $1 OR subjects LIKE $1 LIMIT 3;', [q]); } catch(e){}
 
         setSearchResults({
           papers: pRes || [],
           questions: (qRes || []).map(item => {
-            // Fix: Handles both raw text and JSON strings safely
             let text = item.content_json || 'Untitled Question';
             try { 
               const parsed = JSON.parse(item.content_json); 
               if (parsed.text) text = parsed.text; 
-            } catch(e) {} // If it's not JSON, it just uses the raw text!
+            } catch(e) {}
             return { id: item.id, content: text };
           }),
           teachers: tRes || []
@@ -104,7 +98,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         setIsSearching(false);
         setSyncStatus('saved');
       }
-    }, 400); // 400ms delay prevents database lag
+    }, 400);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
@@ -200,12 +194,21 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     }
   };
 
+  const liveNotifications = [
+    daysSinceBackup > 7 
+      ? { id: 1, type: 'warning', text: `Database backup is overdue by ${daysSinceBackup} days! Keep your papers safe.` }
+      : { id: 1, type: 'success', text: 'Database backup is up to date and secured.' },
+    stats.questions === 0 
+      ? { id: 2, type: 'info', text: 'Question bank is empty. Click "Add Question" to start building your library!' }
+      : { id: 2, type: 'info', text: `${stats.questions} active examination questions stored locally.` },
+    { id: 3, type: 'system', text: 'Offline Windows SQLite engine running smoothly.' }
+  ];
 
   return (
     <div className="min-h-full bg-[#F8FAFC] p-6 md:p-8 space-y-8 font-sans text-slate-800 animate-fadeIn relative">
       
       {/* ==========================================
-          1. TOP HEADER WITH LIVE SEARCH & SYNC BADGE
+          1. TOP HEADER WITH LIVE SEARCH, SYNC BADGE & POPOVERS
          ========================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5 relative z-40">
         <div className="flex items-center gap-4 flex-1 max-w-xl">
@@ -286,7 +289,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     )}
                   </div>
                 )}
-                {/* Search Footer */}
                 <div className="bg-slate-50 border-t border-slate-100 p-2.5 text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                   Press Enter to view all results
                 </div>
@@ -295,7 +297,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 self-end sm:self-auto">
+        <div className="flex items-center gap-4 self-end sm:self-auto relative">
           {/* FUNCTIONAL DYNAMIC SYNC BADGE */}
           <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border shadow-2xs transition-colors duration-300 ${
             syncStatus === 'syncing' 
@@ -307,16 +309,96 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             ) : (
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
             )}
-            <span>{syncStatus === 'syncing' ? 'Syncing...' : 'All changes saved'}</span>
+            <span className="hidden sm:inline-block">{syncStatus === 'syncing' ? 'Syncing...' : 'All changes saved'}</span>
           </div>
 
-          <button onClick={() => { setShowNotifications(!showNotifications); setShowProfileMenu(false); }} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors relative cursor-pointer">
-            <Bell className="w-5 h-5" />
-            {daysSinceBackup > 7 && <span className="w-2 h-2 bg-amber-500 rounded-full absolute top-1.5 right-1.5 ring-2 ring-white animate-pulse" />}
-          </button>
+          {/* FUNCTIONAL NOTIFICATION BELL */}
+          <div>
+            <button 
+              onClick={() => { setShowNotifications(!showNotifications); setShowProfileMenu(false); }}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors relative cursor-pointer"
+            >
+              <Bell className="w-5 h-5" />
+              {daysSinceBackup > 7 && (
+                <span className="w-2 h-2 bg-amber-500 rounded-full absolute top-1.5 right-1.5 ring-2 ring-white animate-pulse" />
+              )}
+            </button>
 
-          <div onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false); }} className="w-8 h-8 rounded-full bg-[#0D9488] hover:bg-[#0b7d73] text-white font-bold text-xs flex items-center justify-center shadow-sm cursor-pointer transition-transform hover:scale-105">
-            AR
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 space-y-3 z-50 animate-scaleUp">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="font-extrabold text-xs text-slate-800 uppercase tracking-wider">System Notifications</span>
+                  <button onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-2.5">
+                  {liveNotifications.map(n => (
+                    <div key={n.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100/80 flex items-start gap-2.5 text-xs font-medium">
+                      {n.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />}
+                      {n.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />}
+                      {n.type === 'info' && <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />}
+                      {n.type === 'system' && <ShieldCheck className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />}
+                      <span className="text-slate-700 leading-relaxed">{n.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* FUNCTIONAL PROFILE AVATAR */}
+          <div>
+            <div 
+              onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false); }}
+              className="w-8 h-8 rounded-full bg-[#0D9488] hover:bg-[#0b7d73] text-white font-bold text-xs flex items-center justify-center shadow-sm cursor-pointer transition-transform hover:scale-105"
+            >
+              AR
+            </div>
+
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-3 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 space-y-4 z-50 animate-scaleUp">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                  <div className="w-10 h-10 rounded-full bg-[#0D9488] text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-md">
+                    AR
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-extrabold text-sm text-slate-800 truncate">School Administrator</h4>
+                    <p className="text-xs text-slate-400 truncate" title={schoolName}>{schoolName}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 text-xs font-semibold text-slate-600">
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Session:</span>
+                    <span className="font-bold text-slate-800">{session}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-50">
+                    <span className="text-slate-400">Database Status:</span>
+                    <span className="text-emerald-600 font-bold">Online (Local)</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-400">App Version:</span>
+                    <span className="font-mono text-slate-700">v1.0.0</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 space-y-2 border-t border-slate-100">
+                  <button 
+                    onClick={() => { setShowProfileMenu(false); onNavigate && onNavigate('settings'); }}
+                    className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4 text-slate-500" />
+                    <span>School Settings</span>
+                  </button>
+                  <button 
+                    onClick={() => { setShowProfileMenu(false); onNavigate && onNavigate('backup'); }}
+                    className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                    <span>Security & Backups</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
