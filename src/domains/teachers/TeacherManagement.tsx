@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Search, Bell, CheckCircle2, Plus, FileText, ClipboardList, 
-  Edit, Trash2, X, UserPlus, BookOpen, GraduationCap 
+  Edit, Trash2, X, UserPlus,
 } from 'lucide-react';
 import { getDatabase } from '../../database/db';
 
@@ -19,7 +19,7 @@ interface TeacherManagementProps {
 }
 
 export default function TeacherManagement({ onNavigate }: TeacherManagementProps) {
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
