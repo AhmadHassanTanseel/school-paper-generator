@@ -16,6 +16,13 @@
   direction: rtl;
 }
 
+/* Print styles for A4 paper preview */
+@media print {
+  aside, nav, button, .print\:hidden { display: none !important; }
+  body { background: white !important; }
+  @page { size: A4; margin: 15mm; }
+}
+
 /* Base application styling */
 body {
   margin: 0;

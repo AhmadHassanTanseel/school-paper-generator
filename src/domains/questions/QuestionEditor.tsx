@@ -113,6 +113,22 @@ export default function QuestionEditor({ questionId, onClose, onSaved }: Questio
 
   const fieldError = (key: string) => errors[key];
 
+  const examples = [
+    { label: 'English Short', content: 'Define velocity and write its SI unit. State whether it is a scalar or vector quantity.', lang: 'English', type: 'Short Question', dir: 'ltr' as const },
+    { label: 'Urdu RTL', content: 'درج ذیل نظم کی تشریح کریں اور شاعر کا نام بھی لکھیں۔', lang: 'Urdu', type: 'Long Question', dir: 'rtl' as const },
+    { label: 'Arabic RTL', content: 'اكتب خمس جمل عن المدرسة باللغة العربية.', lang: 'Arabic', type: 'Essay', dir: 'rtl' as const },
+    { label: 'Math Equation', content: 'Solve the quadratic equation: 2x² - 5x + 3 = 0', lang: 'English', type: 'Numerical', dir: 'ltr' as const },
+    { label: 'Physics Numerical', content: 'A car accelerates from 10 m/s to 30 m/s in 5 seconds. Calculate acceleration and distance.', lang: 'English', type: 'Numerical', dir: 'ltr' as const },
+    { label: 'Chemistry Formula', content: 'Balance the equation: H₂ + O₂ → H₂O. Show working.', lang: 'English', type: 'Numerical', dir: 'ltr' as const },
+  ];
+
+  const loadExample = (ex: typeof examples[0]) => {
+    setContent(ex.content);
+    setLanguage(ex.lang);
+    setDirection(ex.dir);
+    setQuestionType(ex.type);
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-200 my-4 flex flex-col max-h-[95vh]">
@@ -126,6 +142,15 @@ export default function QuestionEditor({ questionId, onClose, onSaved }: Questio
 
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-7 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <span className="text-[10px] font-bold text-slate-400 uppercase w-full">Quick Examples:</span>
+              {examples.map(ex => (
+                <button key={ex.label} type="button" onClick={() => loadExample(ex)}
+                  className="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-slate-200 hover:border-teal-400 hover:bg-teal-50 text-slate-600 cursor-pointer">
+                  {ex.label}
+                </button>
+              ))}
+            </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700">Question Text <span className="text-red-500">*</span></label>
               <textarea

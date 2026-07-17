@@ -3,6 +3,8 @@ import {
   Search, Bell, CheckCircle2, Plus, FileText, ClipboardList, 
   Edit, Trash2, X, UserPlus,
 } from 'lucide-react';
+import { validateTeacherForm } from '../../utils/validation';
+import { useApp } from '../../context/AppContext';
 import { getDatabase } from '../../database/db';
 
 interface Teacher {
@@ -19,6 +21,7 @@ interface TeacherManagementProps {
 }
 
 export default function TeacherManagement({ onNavigate }: TeacherManagementProps) {
+  const { showToast, confirm } = useApp();
   const [, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -28,6 +31,7 @@ export default function TeacherManagement({ onNavigate }: TeacherManagementProps
   const [formName, setFormName] = useState('');
   const [formSubjects, setFormSubjects] = useState('');
   const [formClasses, setFormClasses] = useState('Grade 8, Grade 9');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // High-Fidelity Figma Fallback Faculty (Exact match to your screenshot!)
   const [teachers, setTeachers] = useState<Teacher[]>([
@@ -145,9 +149,11 @@ export default function TeacherManagement({ onNavigate }: TeacherManagementProps
 
   const handleSaveTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName || !formSubjects) return;
+    const validation = validateTeacherForm({ name: formName, subjects: formSubjects, classes: formClasses });
+    if (!validation.valid) { setFormErrors(validation.errors); showToast('Please fix the highlighted fields.', 'error'); return; }
+    setFormErrors({});
 
-    const classesArray = formClasses.split(',').map(c => c.trim()).filter(Boolean);
+    const classesArray = formClasses.split(',').map((c: string) => c.trim()).filter(Boolean);
 
     try {
       const db = await getDatabase();
@@ -191,7 +197,8 @@ export default function TeacherManagement({ onNavigate }: TeacherManagementProps
   };
 
   const handleDeleteTeacher = async (id: number, name: string) => {
-    if (!window.confirm(`Are you sure you want to remove "${name}" from the faculty roster?`)) return;
+    const ok = await confirm({ title: 'Remove Teacher?', message: `Remove "${name}" from the faculty roster?`, confirmLabel: 'Remove', destructive: true });
+    if (!ok) return;
     try {
       const db = await getDatabase();
       await db.execute('DELETE FROM teachers WHERE id = $1;', [id]);
@@ -391,8 +398,9 @@ export default function TeacherManagement({ onNavigate }: TeacherManagementProps
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. Mr. Kamran Ali"
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className={`w-full p-3 bg-white border rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${formErrors.name ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {formErrors.name && <p className="text-red-500 text-[11px] font-normal">{formErrors.name}</p>}
               </div>
 
               <div className="space-y-1">

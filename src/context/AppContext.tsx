@@ -16,13 +16,24 @@ interface ConfirmOptions {
   destructive?: boolean;
 }
 
+interface NavigateOptions {
+  paperId?: number | null;
+  viewPaperId?: number | null;
+  answerKeyPaperId?: number | null;
+  questionId?: number;
+  openEditor?: boolean;
+}
+
 interface AppContextValue {
   activeTab: string;
   editPaperId: number | null;
+  viewPaperId: number | null;
+  answerKeyPaperId: number | null;
   openQuestionEditor: boolean;
   editQuestionId: number | null;
-  navigate: (tab: string, options?: { paperId?: number; questionId?: number; openEditor?: boolean }) => void;
+  navigate: (tab: string, options?: NavigateOptions) => void;
   clearEditPaper: () => void;
+  clearViewPaper: () => void;
   showToast: (message: string, type?: ToastType) => void;
   toasts: ToastMessage[];
   dismissToast: (id: number) => void;
@@ -40,6 +51,8 @@ let confirmResolver: ((value: boolean) => void) | null = null;
 export function AppProvider({ children, initialTab = 'dashboard' }: { children: ReactNode; initialTab?: string }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [editPaperId, setEditPaperId] = useState<number | null>(null);
+  const [viewPaperId, setViewPaperId] = useState<number | null>(null);
+  const [answerKeyPaperId, setAnswerKeyPaperId] = useState<number | null>(null);
   const [openQuestionEditor, setOpenQuestionEditor] = useState(false);
   const [editQuestionId, setEditQuestionId] = useState<number | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -56,12 +69,16 @@ export function AppProvider({ children, initialTab = 'dashboard' }: { children: 
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const navigate = useCallback((tab: string, options?: { paperId?: number; questionId?: number; openEditor?: boolean }) => {
+  const navigate = useCallback((tab: string, options?: NavigateOptions) => {
     setActiveTab(tab);
     if (options?.paperId !== undefined) setEditPaperId(options.paperId);
+    if (options?.viewPaperId !== undefined) setViewPaperId(options.viewPaperId);
+    if (options?.answerKeyPaperId !== undefined) setAnswerKeyPaperId(options.answerKeyPaperId);
     if (options?.questionId !== undefined) setEditQuestionId(options.questionId);
     if (options?.openEditor) setOpenQuestionEditor(true);
-    if (tab !== 'builder' && !options?.paperId) setEditPaperId(null);
+    if (tab !== 'builder' && options?.paperId === undefined) setEditPaperId(null);
+    if (tab !== 'paper-details' && options?.viewPaperId === undefined) setViewPaperId(null);
+    if (tab !== 'answer-key' && options?.answerKeyPaperId === undefined) setAnswerKeyPaperId(null);
     if (tab !== 'questions' && !options?.openEditor) {
       setOpenQuestionEditor(false);
       if (!options?.questionId) setEditQuestionId(null);
@@ -69,6 +86,7 @@ export function AppProvider({ children, initialTab = 'dashboard' }: { children: 
   }, []);
 
   const clearEditPaper = useCallback(() => setEditPaperId(null), []);
+  const clearViewPaper = useCallback(() => setViewPaperId(null), []);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise(resolve => {
@@ -87,8 +105,8 @@ export function AppProvider({ children, initialTab = 'dashboard' }: { children: 
 
   return (
     <AppContext.Provider value={{
-      activeTab, editPaperId, openQuestionEditor, editQuestionId,
-      navigate, clearEditPaper, showToast, toasts, dismissToast,
+      activeTab, editPaperId, viewPaperId, answerKeyPaperId, openQuestionEditor, editQuestionId,
+      navigate, clearEditPaper, clearViewPaper, showToast, toasts, dismissToast,
       confirm, confirmState, handleConfirm, refreshKey, triggerRefresh,
     }}>
       {children}

@@ -4,6 +4,8 @@ import {
   Edit2, Copy, Star, X, Save
 } from 'lucide-react';
 import { getDatabase } from '../../database/db';
+import { validateTemplateForm } from '../../utils/validation';
+import { useApp } from '../../context/AppContext';
 
 interface PaperTemplate {
   id: number;
@@ -16,6 +18,7 @@ interface PaperTemplate {
 }
 
 export default function PaperTemplates() {
+  const { showToast } = useApp();
   const [, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -29,6 +32,7 @@ export default function PaperTemplates() {
   const [formMarks, setFormMarks] = useState(50);
   const [formDuration, setFormDuration] = useState('1.5 hr');
   const [formLanguage, setFormLanguage] = useState('English');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Exact Figma Fallback Data
   const [templates, setTemplates] = useState<PaperTemplate[]>([
@@ -110,7 +114,9 @@ export default function PaperTemplates() {
 
   const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName || !formSections) return;
+    const validation = validateTemplateForm({ name: formName, sections: formSections, marks: formMarks, duration: formDuration, language: formLanguage });
+    if (!validation.valid) { setFormErrors(validation.errors); showToast('Please fix the highlighted fields.', 'error'); return; }
+    setFormErrors({});
 
     try {
       const db = await getDatabase();
@@ -148,7 +154,24 @@ export default function PaperTemplates() {
     }
   };
 
-  const filteredTemplates = templates.filter(t => 
+  const handleDuplicateTemplate = async (t: PaperTemplate) => {
+    try {
+      const db = await getDatabase();
+      await db.execute(
+        `INSERT INTO paper_templates (name, sections, marks, duration, language, is_default) VALUES ($1, $2, $3, $4, $5, 0);`,
+        [`${t.name} (Copy)`, t.sections, t.marks, t.duration, t.language]
+      );
+      const res = await db.select<PaperTemplate[]>('SELECT * FROM paper_templates ORDER BY id DESC LIMIT 1;');
+      if (res?.[0]) {
+        setTemplates(prev => [...prev, { ...res[0], isDefault: false }]);
+      }
+      showToast('Template duplicated successfully.', 'success');
+    } catch {
+      showToast('Failed to duplicate template.', 'error');
+    }
+  };
+
+  const filteredTemplates = templates.filter(t =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.sections.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -249,6 +272,7 @@ export default function PaperTemplates() {
               </button>
 
               <button 
+                onClick={() => handleDuplicateTemplate(template)}
                 title="Duplicate Template"
                 className="p-2.5 border border-slate-200 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
               >
@@ -300,8 +324,9 @@ export default function PaperTemplates() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. Science Bi-Weekly Test"
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className={`w-full p-3 bg-white border rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 ${formErrors.name ? 'border-red-400' : 'border-slate-200'}`}
                 />
+                {formErrors.name && <p className="text-red-500 text-[11px]">{formErrors.name}</p>}
               </div>
 
               <div className="space-y-1.5">

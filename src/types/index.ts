@@ -88,6 +88,7 @@ export interface PaperSection {
   description: string;
   questions: PaperQuestion[];
   attempt_any?: number;
+  type?: 'questions' | 'instruction' | 'pagebreak';
 }
 
 export interface PaperDetails {

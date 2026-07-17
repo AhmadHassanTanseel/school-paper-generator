@@ -6,12 +6,16 @@ import {
   X, Download, Sparkles, Loader2, User
 } from 'lucide-react';
 import { getDatabase } from '../../database/db';
+import { downloadBackup } from '../../services/backupService';
+import { getPapersThisMonth } from '../../services/paperService';
+import { useApp } from '../../context/AppContext';
 
 interface DashboardProps {
   onNavigate?: (tab: string) => void;
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
+  const { showToast } = useApp();
   const [, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'syncing' | 'saved'>('syncing');
   
@@ -126,12 +130,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         } catch (e) {}
 
         try {
-          const qCount = await db.select<any[]>('SELECT COUNT(*) as count FROM question_bank;');
-          const pCount = await db.select<any[]>('SELECT COUNT(*) as count FROM generated_papers;');
-          const sCount = await db.select<any[]>('SELECT COUNT(*) as count FROM subjects;');
-          const tCount = await db.select<any[]>('SELECT COUNT(*) as count FROM teachers;');
+          const qCount = await db.select<any[]>('SELECT COUNT(*) as count FROM question_bank WHERE is_archived = 0 OR is_archived IS NULL;');
+          const pCount = await getPapersThisMonth();
+          const sCount = await db.select<any[]>('SELECT COUNT(*) as count FROM subjects WHERE is_archived = 0 OR is_archived IS NULL;');
+          const tCount = await db.select<any[]>('SELECT COUNT(*) as count FROM teachers WHERE is_archived = 0 OR is_archived IS NULL;');
           setStats({
-            questions: qCount?.[0]?.count || 0, papersThisMonth: pCount?.[0]?.count || 0,
+            questions: qCount?.[0]?.count || 0, papersThisMonth: pCount || 0,
             subjects: sCount?.[0]?.count || 0, teachers: tCount?.[0]?.count || 0
           });
         } catch (e) {}
@@ -167,26 +171,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     setIsBackingUp(true);
     setSyncStatus('syncing');
     try {
-      const db = await getDatabase();
-      const now = new Date().toISOString().split('T')[0];
-      await db.execute(`UPDATE school_config SET last_backup_date = $1 WHERE id = 1;`, [now]);
-      
-      const allPapers = await db.select<any[]>('SELECT * FROM generated_papers;');
-      const allQuestions = await db.select<any[]>('SELECT * FROM question_bank;');
-      
-      const backupArchive = JSON.stringify({ backup_date: new Date().toISOString(), data: { papers: allPapers, questions: allQuestions } }, null, 2);
-
-      const blob = new Blob([backupArchive], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `School_Backup_${now}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-
+      await downloadBackup();
       setDaysSinceBackup(0);
-      alert('Backup completed successfully!');
-    } catch (err) {
+      showToast('Backup completed successfully!', 'success');
+    } catch {
       alert('Failed to generate backup.');
     } finally {
       setIsBackingUp(false);

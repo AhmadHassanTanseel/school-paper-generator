@@ -15,6 +15,8 @@ import Dashboard from './domains/dashboard/Dashboard';
 import PaperBuilder from './domains/paper/PaperBuilder';
 import QuestionBank from './domains/questions/QuestionBank';
 import OldPapers from './domains/history/OldPapers';
+import PaperDetails from './domains/history/PaperDetails';
+import AnswerKey from './domains/history/AnswerKey';
 import TeacherManagement from './domains/teachers/TeacherManagement';
 import CurriculumManager from './domains/curriculum/CurriculumManager';
 import PaperTemplates from './domains/templates/PaperTemplates';
@@ -154,7 +156,9 @@ function AppShell() {
         {activeTab === 'dashboard' && <Dashboard onNavigate={(tab) => navigate(tab)} />}
         {activeTab === 'builder' && <div className="p-8"><PaperBuilder /></div>}
         {activeTab === 'questions' && <div className="p-8"><QuestionBank /></div>}
-        {activeTab === 'history' && <div className="p-8"><OldPapers onNavigate={(tab) => navigate(tab)} /></div>}
+        {activeTab === 'history' && <div className="p-8"><OldPapers onNavigate={(tab, opts) => navigate(tab, opts)} /></div>}
+        {activeTab === 'paper-details' && <div className="p-8"><PaperDetails /></div>}
+        {activeTab === 'answer-key' && <div className="p-8"><AnswerKey /></div>}
         {activeTab === 'teachers' && <div className="p-8"><TeacherManagement onNavigate={(tab) => navigate(tab)} /></div>}
         {activeTab === 'subjects' && <div className="p-8"><CurriculumManager /></div>}
         {activeTab === 'templates' && <div className="p-8"><PaperTemplates /></div>}
